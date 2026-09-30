@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://kykychat-24c7f.web.app/sitemap.xml
