@@ -17,13 +17,11 @@ button{background:var(--ink);color:#fff;cursor:pointer;font-weight:600}button.g{
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.logo{width:44px;height:44px;object-fit:contain}
 .ph{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.ph img{width:64px;height:64px;object-fit:cover;border-radius:4px;cursor:zoom-in}
 #q{width:100%;margin-bottom:14px}.mut{color:#5b6390;font-size:.9rem}
-#msgs{height:420px;overflow:auto;background:var(--soft);border:2px solid var(--ink);border-radius:6px;padding:12px;margin:10px 0}
-.m{margin-bottom:10px}.m b{color:var(--p)}.m img{max-width:240px;display:block;margin-top:4px;border-radius:6px;cursor:zoom-in}
 #lb{position:fixed;inset:0;background:#000d;display:none;place-items:center;z-index:9}#lb img{max-width:94%;max-height:94%}
 form>*{margin:0 8px 8px 0}
 </style></head><body>
 <header><div><h1 id="t">Lycéens en lutte</h1><p id="st">Ici, on rassemble nos raisons de manifester et les lycées mobilisés.</p></div></header>
-<nav><a href="#raisons">Nos raisons</a><a href="#lycees">Lycées mobilisés</a><a href="#chat">Chat</a></nav>
+<nav><a href="#raisons">Nos raisons</a><a href="#lycees">Lycées mobilisés</a></nav>
 <main>
 <section id="raisons"><h2>Pourquoi on manifeste</h2><div class="grid" id="reasons"></div></section>
 <section id="lycees"><h2>Lycées mobilisés (<span id="cnt">0</span>)</h2>
@@ -31,11 +29,6 @@ form>*{margin:0 8px 8px 0}
 <div class="grid" id="list"></div>
 <h3 style="margin-top:28px">Ton lycée n'est pas dans la liste ?</h3>
 <form id="rf"><input id="rn" placeholder="Nom du lycée" required><input id="rc" placeholder="Ville"><input id="rp" placeholder="Ton pseudo" maxlength="20"><button>Demander l'ajout</button></form><p class="mut" id="rok"></p></section>
-<section id="chat"><h2>Chat de tous les lycées</h2>
-<form id="prof"><input id="pp" placeholder="Pseudo" maxlength="20" required><select id="ps" required></select><button>Entrer dans le chat</button></form>
-<div id="cw" hidden><div class="row"><span class="mut" id="who"></span><button class="g" id="chg">Changer de profil</button></div>
-<div id="msgs"></div>
-<form id="sf" class="row"><input id="tx" placeholder="Ton message…" maxlength="500" style="flex:1;min-width:180px"><button type="button" class="g" id="pb">📷 Photo</button><button>Envoyer</button></form></div></section>
 </main>
 <input type="file" id="f" accept="image/*" hidden><div id="lb" onclick="this.style.display='none'"><img id="lbi"></div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -51,15 +44,12 @@ const DEF={title:"Lycéens en lutte",subtitle:"Ici, on rassemble nos raisons de 
 {icon:"📉",title:"Manque de moyens et de profs",text:"Des postes non pourvus, des cours non remplacés, du matériel manquant."}]};
 function img(file,max=800,type='image/jpeg'){return new Promise(r=>{const f=new FileReader();f.onload=()=>{const i=new Image();i.onload=()=>{const k=Math.min(1,max/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*k;c.height=i.height*k;c.getContext('2d').drawImage(i,0,0,c.width,c.height);r(c.toDataURL(type,.7))};i.src=f.result};f.readAsDataURL(file)})}
 window.zoom=s=>{$('#lbi').src=s;$('#lb').style.display='grid'};
-let schools={},me=null,mode=null,target=null;try{me=JSON.parse(localStorage.kp||'null')}catch(e){}
+let schools={},target=null;
 
 db.ref('content').on('value',s=>{const c=s.val()||DEF;$('#t').textContent=c.title||DEF.title;$('#st').textContent=c.subtitle||'';document.title=c.title||DEF.title;
 $('#reasons').innerHTML=Object.values(c.reasons||[]).map(r=>`<div class="card"><div class="big">${esc(r.icon)}</div><h3>${esc(r.title)}</h3><p>${esc(r.text)}</p></div>`).join('')});
 
-db.ref('schools').on('value',s=>{schools=s.val()||{};rs();
-const l=Object.entries(schools).sort((a,b)=>a[1].name.localeCompare(b[1].name));
-$('#ps').innerHTML='<option value="">Choisis ton établissement</option>'+l.map(([id,x])=>`<option value="${id}">${esc(x.name)}${x.city?' ('+esc(x.city)+')':''}</option>`).join('');
-if(me)$('#ps').value=me.school;pf()});
+db.ref('schools').on('value',s=>{schools=s.val()||{};rs()});
 
 function rs(){const q=$('#q').value.toLowerCase(),l=Object.entries(schools).filter(([,s])=>s.affected&&(s.name+' '+(s.city||'')).toLowerCase().includes(q));
 $('#cnt').textContent=l.length;
@@ -67,20 +57,11 @@ $('#list').innerHTML=l.map(([id,s])=>`<div class="card"><div class="row">${ok(s.
 <div class="ph">${Object.values(s.photos||{}).map(p=>ok(p)?`<img src="${ok(p)}" onclick="zoom(this.src)" alt="Photo de la mobilisation">`:'').join('')}</div>
 <button class="g" data-add="${id}">📷 Ajouter une photo</button></div>`).join('')||'<p>Aucun lycée trouvé. Demande l\'ajout du tien ci-dessous.</p>'}
 $('#q').oninput=rs;
-$('#list').onclick=e=>{const id=e.target.dataset.add;if(id){mode='school';target=id;$('#f').click()}};
+$('#list').onclick=e=>{const id=e.target.dataset.add;if(id){target=id;$('#f').click()}};
 $('#f').onchange=async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;const d=await img(file);
-if(mode=='school')db.ref(`schools/${target}/photos`).push(d);else send('',d)};
+db.ref(`schools/${target}/photos`).push(d)};
 
 $('#rf').onsubmit=e=>{e.preventDefault();db.ref('requests').push({name:$('#rn').value.trim(),city:$('#rc').value.trim(),pseudo:$('#rp').value.trim()||'anonyme',ts:firebase.database.ServerValue.TIMESTAMP})
 .then(()=>{$('#rok').textContent='Demande envoyée. Un admin va la consulter.';e.target.reset()}).catch(()=>$('#rok').textContent="Erreur : demande non envoyée.")};
 
-function pf(){$('#prof').hidden=!!me;$('#cw').hidden=!me;if(me)$('#who').textContent=me.pseudo+' – '+me.sn}
-$('#prof').onsubmit=e=>{e.preventDefault();const id=$('#ps').value;if(!id)return;me={pseudo:$('#pp').value.trim(),school:id,sn:schools[id].name};localStorage.kp=JSON.stringify(me);pf()};
-$('#chg').onclick=()=>{me=null;localStorage.removeItem('kp');pf()};
-function send(t,i){if(!me||(!t&&!i))return;return db.ref('messages').push({pseudo:me.pseudo,school:me.sn,text:t,img:i||null,ts:firebase.database.ServerValue.TIMESTAMP})}
-$('#sf').onsubmit=e=>{e.preventDefault();const t=$('#tx').value.trim();$('#tx').value='';send(t)};
-$('#pb').onclick=()=>{mode='chat';$('#f').click()};
-db.ref('messages').limitToLast(100).on('value',s=>{const b=$('#msgs'),bot=b.scrollTop+b.clientHeight>=b.scrollHeight-40;
-b.innerHTML=Object.values(s.val()||{}).map(m=>`<div class="m"><b>${esc(m.pseudo)}</b> <span class="mut">${esc(m.school)} · ${m.ts?new Date(m.ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):''}</span><br>${esc(m.text)}${ok(m.img)?`<img src="${ok(m.img)}" onclick="zoom(this.src)" alt="Photo">`:''}</div>`).join('')||'<p class="mut">Aucun message. Lance la discussion !</p>';
-if(bot)b.scrollTop=b.scrollHeight});
 </script></body></html>
